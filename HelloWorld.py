@@ -172,26 +172,30 @@ check_time_term = "3" #3초에 한번 확인
 ######################################################################
 ######################################################################
 
-id = ""
-pw = ""
-
-print ("id입력:")
-id = input()
-print ("pw입력:")
-pw = input()
+id = input("id입력:")
+pw = input("pw입력:")
 
 if login(id, pw)!=200:
     print("----login fail----")
     sys.exit(1)
 
 print ("----login success----")
-session_etk = ""
 
+## 열차 빈 좌석 확인
+stations = station.keys()
+while True:
+    print ("역정보:"+str(stations))
+    start_station = input("출발역을 입력하세요:")
+    dest_station = input("도착역을 입력하세요:")
 
+    if (start_station in stations) and (dest_station in stations):
+        break
+    print("역 정보가 올바르지 않습니다. 다시 입력하세요")
 
-
-response = requests.post('https://etk.srail.co.kr/hpg/hra/01/selectMapInfo.do?isAll=Y&other=&target=dpt&pageId=TK0101010000', headers = common_header, params = param)
-print(response.status_code)
+# session_etk = ""
+#
+# response = requests.post('https://etk.srail.co.kr/hpg/hra/01/selectMapInfo.do?isAll=Y&other=&target=dpt&pageId=TK0101010000', headers = common_header, params = param)
+# print(response.status_code)
 
 
 temp = """
