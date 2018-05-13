@@ -1,5 +1,6 @@
 # -*- emcoding: utf8 -*-
 import requests
+import time
 import sys
 
 my_cookie = {
@@ -64,8 +65,65 @@ common_header = {
 }
 
 login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
+reserve_referer = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
 
-def login():
+reserve_param = {
+    'arvRsStnCd1': '0015',
+    'arvStnConsOrdr1': '000014',
+    'arvStnRunOrdr1': '000004',
+    'crossYn': 'N',
+    'dirSeatAttCd1': '000',
+    'dptDt1': '20180525',
+    'dptRsStnCd1': '0551',
+    'dptStnConsOrdr1': '000001',
+    'dptStnRunOrdr1': '000001',
+    'dptTm1': '200000',
+    'etcSeatAttCd1': '000',
+    'jobId': '1101',
+    'jrnyCnt': '1',
+    'jrnySqno1': '001',
+    'jrnyTpCd': '11',
+    'locSeatAttCd1': '000',
+    'mutMrkVrfCd': None,
+    'psgGridcnt': '1',
+    'psgInfoPerPrnb1': '1',
+    'psgInfoPerPrnb2': None,
+    'psgInfoPerPrnb3': None,
+    'psgInfoPerPrnb4': None,
+    'psgInfoPerPrnb5': None,
+    'psgTpCd1': '1',
+    'psgTpCd2': None,
+    'psgTpCd3': None,
+    'psgTpCd4': None,
+    'psgTpCd5': None,
+    'psrmClCd1': '1',
+    'reqTime': '1526195770894',
+    'rqSeatAttCd1': '015',
+    'rsvTpCd': '01',
+    'runDt1': '20180525',
+    'scarGridcnt1': None,
+    'scarNo1': None,
+    'scarYn1': 'N',
+    'seatNo1_1': None,
+    'seatNo1_2': None,
+    'seatNo1_3': None,
+    'seatNo1_4': None,
+    'seatNo1_5': None,
+    'seatNo1_6': None,
+    'seatNo1_7': None,
+    'seatNo1_8': None,
+    'seatNo1_9': None,
+    'smkSeatAttCd1': '000',
+    'stlbTrnClsfCd1': '17',
+    'stndFlg': 'N',
+    'totPrnb': '1',
+    'trnGpCd1': '300',
+    'trnNo1': '00369',
+    'trnOrdrNo1': '6'
+}
+
+
+def login(id, pw):
     header = common_header.copy()
     header["Referer"] = login_referer
     header['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -75,12 +133,28 @@ def login():
         'goUrl': None,
         'from': None,
         'srchDvCd': '1',
-        'srchDvNm': '1584314147',
-        'hmpgPwdCphd': '78tntor!@'
+        'srchDvNm': id,
+        'hmpgPwdCphd': pw
     }
     r = requests.post('https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000', headers = header, params = param)
-    print (r.status_code)
-    print (r.text)
+
+    if '오류' in r.text:
+        return 400
+    elif '실패' in r.text:
+        return 400
+    elif 'location.replace(\'/main.do\')' in r.text:
+        return 200
+
+#예약하기
+def reserve():
+    req_time = int(time.time()*1000)
+
+    print ("")
+
+#빈 좌석이 있는지 확인
+# 있으면 시간, 좌석정보(가능할까) 반환
+def checkSeat():
+    print ("")
 
 def getSessionETK():
     response = requests.get("https://etk.srail.co.kr/")
@@ -90,12 +164,13 @@ def getSessionETK():
     else:
         return "-1"
 
-######################################################################
-######################################################################
-######################################################################
-######################################################################
-######################################################################
+check_time_term = "3" #3초에 한번 확인
 
+######################################################################
+######################################################################
+######################################################################
+######################################################################
+######################################################################
 
 id = ""
 pw = ""
@@ -105,12 +180,11 @@ id = input()
 print ("pw입력:")
 pw = input()
 
-login()
+if login(id, pw)!=200:
+    print("----login fail----")
+    sys.exit(1)
 
-print(common_header)
-
-
-
+print ("----login success----")
 session_etk = ""
 
 
