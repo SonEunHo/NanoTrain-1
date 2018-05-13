@@ -1,7 +1,124 @@
-import math
+# -*- emcoding: utf8 -*-
+import requests
+import sys
 
-print ("hello")
-print (str(math.sqrt(20)))
+my_cookie = {
+    'JSESSIONID_ETK': '9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT',
+    'PCID': '15261430919745926997128',
+    'RC_COLOR': '24',
+    'RC_RESOLUTION': '1680*1050'
+}
+
+station = {
+    "공주": '0514',
+    "광주송정": '0036',
+    '김천구미': '0507',
+    '나주': '0037',
+    '대전': '0010',
+    '동대구': '0015',
+    '동탄': '0552',
+    '목포': '0041',
+    '부산': '0020',
+    '수서': '0551',
+    '신경주': '0508',
+    '오송': '0297',
+    '울산': '0509',
+    '익산': '0030',
+    '정읍': '0033',
+    '지제': '0553',
+    '천안아산': '0502'
+}
+
+param = {
+    "dptRsStnCd": '0551',
+    "arvRsStnCd": '0020',
+    "stlbTrnClsfCd": '05',
+    "psgNum": '1',
+    "seatAttCd": '015',
+    "isRequest": 'Y',
+    "dptRsStnCdNm": '수서',
+    "arvRsStnCdNm": '부산',
+    "dptDt": '20180513',
+    "dptTm": '005000',
+    "chtnDvCd": '1',
+    "psgInfoPerPrnb1": '1',
+    "psgInfoPerPrnb5": '0',
+    "psgInfoPerPrnb4": '0',
+    "psgInfoPerPrnb2": '0',
+    "psgInfoPerPrnb3": '0',
+    "locSeatAttCd1": '000',
+    "rqSeatAttCd1": '015',
+    "trnGpCd": '109'
+}
+
+common_header = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Connection": "keep-alive",
+    "Cookie": "PCID=15254283299465733307147; RC_COLOR=24; JSESSIONID_ETK=9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT; RC_RESOLUTION=1920*1080",
+    "Host": "etk.srail.co.kr",
+    "Referer": "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
+}
+
+login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
+
+def login():
+    header = common_header.copy()
+    header["Referer"] = login_referer
+    header['Content-Type'] = 'application/x-www-form-urlencoded'
+
+    param = {
+        'rsvTpCd': None,
+        'goUrl': None,
+        'from': None,
+        'srchDvCd': '1',
+        'srchDvNm': '1584314147',
+        'hmpgPwdCphd': '78tntor!@'
+    }
+    r = requests.post('https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000', headers = header, params = param)
+    print (r.status_code)
+    print (r.text)
+
+def getSessionETK():
+    response = requests.get("https://etk.srail.co.kr/")
+    print (response.cookies.get_dict())
+    if response.status_code == 200:
+        return response.cookies['JSESSIONID_ETK']
+    else:
+        return "-1"
+
+######################################################################
+######################################################################
+######################################################################
+######################################################################
+######################################################################
+
+
+id = ""
+pw = ""
+
+print ("id입력:")
+id = input()
+print ("pw입력:")
+pw = input()
+
+login()
+
+print(common_header)
+
+
+
+session_etk = ""
+
+
+
+
+response = requests.post('https://etk.srail.co.kr/hpg/hra/01/selectMapInfo.do?isAll=Y&other=&target=dpt&pageId=TK0101010000', headers = common_header, params = param)
+print(response.status_code)
+
 
 temp = """
 
