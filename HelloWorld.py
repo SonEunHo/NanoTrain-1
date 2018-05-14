@@ -153,8 +153,33 @@ def reserve():
 
 #빈 좌석이 있는지 확인
 # 있으면 시간, 좌석정보(가능할까) 반환
-def checkSeat():
-    print ("")
+def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
+    header = common_header
+    header["Referer"] = "https://etk.srail.co.kr/main.do"
+    header['Content-Type'] = 'application/x-www-form-urlencoded'
+
+    param = {
+        'chtnDvCd': '1',
+        'isRequest': 'Y',
+        'psgInfoPerPrnb1': '1',
+        'psgInfoPerPrnb2': '0',
+        'psgInfoPerPrnb3': '0',
+        'psgInfoPerPrnb4': '0',
+        'psgInfoPerPrnb5': '0',
+        'psgNum': '1',
+        'seatAttCd': '015',
+        'stlbTrnClsfCd': '05',
+        'trnGpCd': '109'
+    }
+    param['arvRsStnCdNm'] = dest
+    param['arvRsStnCd'] = station[dest]
+    param['dptRsStnCdNm'] = start
+    param['dptRsStnCd'] = station[start]
+    param['dptDt'] = date
+    param['dptTm'] = time_min
+
+    response = requests.post("https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000")
+
 
 def getSessionETK():
     response = requests.get("https://etk.srail.co.kr/")
@@ -191,6 +216,19 @@ while True:
     if (start_station in stations) and (dest_station in stations):
         break
     print("역 정보가 올바르지 않습니다. 다시 입력하세요")
+
+while True:
+    date = input("승차할 날짜를 입력하세요 (ex. 20180515) ('-'포함금지) :")
+    print("승차하고자 하는 시간대를 입력해주세요 (ex 14시~16시)")
+    time_min = input("승차하고자 하는 가장 빠른 시간을 입력해주세요:")
+    time_max = input("승차하고자 하는 가장 늦은 시간을 입력해주세요:")
+    isRight = input("date = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(date, time_min, time_max))
+    if isRight.lower() == 'y':
+        break;
+
+print("date = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(date, time_min, time_max))
+
+#checkSeat(start_station, dest_station, date, time_min, time_max)
 
 # session_etk = ""
 #
