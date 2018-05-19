@@ -151,6 +151,66 @@ def login(id, pw):
 def reserve(can_reserve_list):
     req_time = int(time.time()*1000)
     print ("req_time:{}".format(req_time))
+    header = common_header
+    header['Cookie'] = header['Cookie']+" SR_MB_CD_NO="+str(id)
+    header['Upgrade-Insecure-Requests'] = 1
+    header['Referer'] = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
+
+    for tr in can_reserve_list:
+        param = set_reserve_param(tr)
+
+        #https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000
+        response = requests.post("https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000", headers = header, params = param)
+        if not (response.status_code == 200 and "location.replace('/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000')" in response) :
+            continue
+
+
+        #https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000
+        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000")
+        if not (response.status_code == 200 and "location.replace('confirmReservationInfo.do?pageId=TK0101030000')" in response):
+            continue
+
+        #https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000
+        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000")
+        if not (response.status_code == 200 and "10분 내에 결제하지 않으면 예약이 취소됩니다" in response):
+            continue
+        #예약 성공하면 반환값 리턴하면서 종료
+
+def set_reserve_param(tr):
+    param = dict(reserve_param)
+
+    param['dptDt1'] = param['runDt1'] = ""
+
+    train_info_list = bs(str(tr), 'html.parser').select("td.trnNo > input")
+    train_info_dict = { bs(str(info)).find()['name']: bs(str(info)).find()['value'] for info in train_info_list }
+
+
+
+    param['arvStnConsOrdr1'] = train_info_dict['~~']
+    param['arvStnRunOrdr1']
+    param['dirSeatAttCd1']
+    param['dptRsStnCd1'] = "출발역 코드"
+    param['dptStnConsOrdr1']
+    param['dptTm1'] = "tr"
+    param['jrnySqno1'] = "tr"
+    param['locSeatAttCd1'] = "tr"
+    param['reqTime'] = "현재시간"
+    param['rqSeatAttCd1'] = "좌석 속 (일반015 / 휠체어 021 / 전동휠체어 028)"
+    param['seatNo1_1']
+    param['seatNo1_2']
+    param['seatNo1_3']
+    param['seatNo1_4']
+    param['seatNo1_5']
+    param['seatNo1_6']
+    param['seatNo1_7']
+    param['seatNo1_8']
+    param['seatNo1_9']
+    param['stlbTrnClsfCd1'] = "tr"
+    param['trnGpCd1'] = "기차 종"
+    param['trnNo1']
+    param['trnOrdrNo1'] = "화면에서 몇번째 라인에 있던 열차인지"
+
+    return param
 
 #빈 좌석이 있는지 확인
 # 있으면 시간, 좌석정보(가능할까) 반환
@@ -194,7 +254,9 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
 
     return can_reserve_list
 
-def pay():
+def pay(r_id): #r_id : 예약 번호
+    #https://etk.srail.co.kr/hpg/hra/03/selectSettleInfo.do?pageId=TK0101040000
+    #pnrNo	320180516896562
     print("pay")
 
 def getSessionETK():
