@@ -1,7 +1,9 @@
-# -*- emcoding: utf8 -*-
+# -*- encoding: utf8 -*-
 import requests
 import time
 import sys
+from bs4 import BeautifulSoup as bs
+#계정 : 1584314147
 
 my_cookie = {
     'JSESSIONID_ETK': '9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT',
@@ -61,65 +63,65 @@ common_header = {
     "Host": "etk.srail.co.kr",
     "Referer": "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:59.0) Gecko/20100101 Firefox/59.0"
 }
 
 login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
 reserve_referer = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
 
 reserve_param = {
-    'arvRsStnCd1': '0015',
-    'arvStnConsOrdr1': '000014',
-    'arvStnRunOrdr1': '000004',
-    'crossYn': 'N',
-    'dirSeatAttCd1': '000',
-    'dptDt1': '20180525',
-    'dptRsStnCd1': '0551',
-    'dptStnConsOrdr1': '000001',
-    'dptStnRunOrdr1': '000001',
-    'dptTm1': '200000',
-    'etcSeatAttCd1': '000',
-    'jobId': '1101',
-    'jrnyCnt': '1',
-    'jrnySqno1': '001',
-    'jrnyTpCd': '11',
-    'locSeatAttCd1': '000',
-    'mutMrkVrfCd': None,
-    'psgGridcnt': '1',
-    'psgInfoPerPrnb1': '1',
-    'psgInfoPerPrnb2': None,
-    'psgInfoPerPrnb3': None,
-    'psgInfoPerPrnb4': None,
-    'psgInfoPerPrnb5': None,
-    'psgTpCd1': '1',
-    'psgTpCd2': None,
-    'psgTpCd3': None,
-    'psgTpCd4': None,
-    'psgTpCd5': None,
-    'psrmClCd1': '1',
-    'reqTime': '1526195770894',
-    'rqSeatAttCd1': '015',
-    'rsvTpCd': '01',
-    'runDt1': '20180525',
-    'scarGridcnt1': None,
-    'scarNo1': None,
-    'scarYn1': 'N',
-    'seatNo1_1': None,
-    'seatNo1_2': None,
-    'seatNo1_3': None,
-    'seatNo1_4': None,
-    'seatNo1_5': None,
-    'seatNo1_6': None,
-    'seatNo1_7': None,
-    'seatNo1_8': None,
-    'seatNo1_9': None,
-    'smkSeatAttCd1': '000',
-    'stlbTrnClsfCd1': '17',
-    'stndFlg': 'N',
-    'totPrnb': '1',
-    'trnGpCd1': '300',
-    'trnNo1': '00369',
-    'trnOrdrNo1': '6'
+    'arvRsStnCd1': '0015', #도착역 코드
+    'arvStnConsOrdr1': '000014', #tr에 있음
+    'arvStnRunOrdr1': '000004', #tr에 있음
+    'crossYn': 'N', # ????
+    'dirSeatAttCd1': '000', #tr에 있음
+    'dptDt1': '20180525', #날짜
+    'dptRsStnCd1': '0551', #출발역 코드
+    'dptStnConsOrdr1': '000001', #tr에 있음
+    'dptStnRunOrdr1': '000001', #tr에 있음
+    'dptTm1': '200000', #tr에 있음
+    'etcSeatAttCd1': '000', #??
+    'jobId': '1101', #고정인
+    'jrnyCnt': '1', #고정인듯
+    'jrnySqno1': '001', #tr에 있음
+    'jrnyTpCd': '11', #??? 고정인듯
+    'locSeatAttCd1': '000', #좌석위치 (조회시 내가 날림)
+    'mutMrkVrfCd': None, #???
+    'psgGridcnt': '1', #사람수??
+    'psgInfoPerPrnb1': '1', #어른
+    'psgInfoPerPrnb2': None, #장애인(1~3급)
+    'psgInfoPerPrnb3': None, #장애인(4~6급)
+    'psgInfoPerPrnb4': None, #노인
+    'psgInfoPerPrnb5': None, #얼라
+    'psgTpCd1': '1', #어른
+    'psgTpCd2': None, #장애인 1~3급
+    'psgTpCd3': None, #장애인(4~6급)
+    'psgTpCd4': None, #노인
+    'psgTpCd5': None, #얼라
+    'psrmClCd1': '1', #???
+    'reqTime': '1526195770894', #현재 시간
+    'rqSeatAttCd1': '015', #좌석 속성 (일반015 / 휠체어 021 / 전동휠체어 028)
+    'rsvTpCd': '01', #???
+    'runDt1': '20180525', #날
+    'scarGridcnt1': None, #???
+    'scarNo1': None, #???
+    'scarYn1': 'N', #???
+    'seatNo1_1': None, #tr안에 있음
+    'seatNo1_2': None, #tr안에 있음
+    'seatNo1_3': None, #tr안에 있음
+    'seatNo1_4': None, #tr안에 있음
+    'seatNo1_5': None, #tr안에 있음
+    'seatNo1_6': None, #tr안에 있음
+    'seatNo1_7': None, #tr안에 있음
+    'seatNo1_8': None, #tr안에 있음
+    'seatNo1_9': None, #tr안에 있음
+    'smkSeatAttCd1': '000', #???
+    'stlbTrnClsfCd1': '17', #tr에 있
+    'stndFlg': 'N', #??? 입석?
+    'totPrnb': '1', #총 사람 수
+    'trnGpCd1': '300', #기차 종류 (300: srt)
+    'trnNo1': '00369', #기차번호
+    'trnOrdrNo1': '6' #???
 }
 
 
@@ -148,13 +150,13 @@ def login(id, pw):
 #예약하기
 def reserve():
     req_time = int(time.time()*1000)
-
     print ("")
 
 #빈 좌석이 있는지 확인
 # 있으면 시간, 좌석정보(가능할까) 반환
 def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
-    header = common_header
+    header = dict(common_header)
+    del header['Cookie'] #쿠키 값을 없애도 정상 응답이 온다.
     header["Referer"] = "https://etk.srail.co.kr/main.do"
     header['Content-Type'] = 'application/x-www-form-urlencoded'
 
@@ -169,17 +171,29 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
         'psgNum': '1',
         'seatAttCd': '015',
         'stlbTrnClsfCd': '05',
-        'trnGpCd': '109'
+        'trnGpCd': '300' #300으로 하면 srt만 나옴, 109는 상관없이 다.
     }
     param['arvRsStnCdNm'] = dest
     param['arvRsStnCd'] = station[dest]
     param['dptRsStnCdNm'] = start
     param['dptRsStnCd'] = station[start]
     param['dptDt'] = date
-    param['dptTm'] = time_min
+    param['dptTm'] = time_min+'0000'
 
-    response = requests.post("https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000")
+    print(header)
+    response = requests.post("https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000", headers = header, params = param)
 
+    #열차 정보만 가져온다.
+    tr_list = bs(response.text, 'html.parser').select("tbody > tr")
+
+    for tr in tr_list:
+        print("="*20)
+        td_list = bs(str(tr), "html.parser").select('td')
+        if "매진" not in str(td_list[6]):
+            print("예약가능: {}, {}".format(td_list[3], td_list[4]))
+
+def pay():
+    print("pay")
 
 def getSessionETK():
     response = requests.get("https://etk.srail.co.kr/")
@@ -190,6 +204,7 @@ def getSessionETK():
         return "-1"
 
 check_time_term = "3" #3초에 한번 확인
+
 
 ######################################################################
 ######################################################################
@@ -228,12 +243,12 @@ while True:
 
 print("date = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(date, time_min, time_max))
 
-#checkSeat(start_station, dest_station, date, time_min, time_max)
+while True:
+    checkSeat(start_station, dest_station, date, time_min, time_max)
+    #예약 성공하면 종료
+    break;
 
-# session_etk = ""
-#
-# response = requests.post('https://etk.srail.co.kr/hpg/hra/01/selectMapInfo.do?isAll=Y&other=&target=dpt&pageId=TK0101010000', headers = common_header, params = param)
-# print(response.status_code)
+
 
 
 temp = """
@@ -241,39 +256,6 @@ temp = """
 검색 -> 예매하기 -> 좌석 고르기 -> 결
 
 cookie : JSESSESIONID, PCID, RC_COLOR, RC_RESOLUTION
-
-지역 코드
-몇시차, 인원, 좌석위치
-
-var srt = ['0514', '0036', '0507', '0037', '0010', '0015', '0552', '0041', '0020', '0551', '0508', '0297', '0509', '0030', '0033', '0553', '0502'];
-<ul>
-						<li><a href="#none" onclick="selectStnCd(this, '0551', '수서'); return false;" class="map-01">수서</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0552', '동탄'); return false;" class="map-02">동탄</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0553', '지제'); return false;" class="map-03">지제</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0502', '천안아산'); return false;" class="map-04">천안아산</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0297', '오송'); return false;" class="map-05">오송</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0010', '대전'); return false;" class="map-06">대전</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0507', '김천구미'); return false;" class="map-07">김천구미</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0015', '동대구'); return false;" class="map-08">동대구</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0508', '신경주'); return false;" class="map-09">신경주</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0509', '울산'); return false;" class="map-10">울산</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0020', '부산'); return false;" class="map-11">부산</a></li>
-					</ul>
-				</li>
-				<li>호남고속선
-					<ul>
-						<li>수서</li>
-						<li>동탄</li>
-						<li>지제</li>
-						<li>천안아산</li>
-						<li>오송</li>
-						<li><a href="#none" onclick="selectStnCd(this, '0514', '공주'); return false;" class="map-12">공주</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0030', '익산'); return false;" class="map-14">익산</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0033', '정읍'); return false;" class="map-15">정읍</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0036', '광주송정'); return false;" class="map-16">광주송정</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0037', '나주'); return false;" class="map-17">나주</a></li>
-						<li><a href="#none" onclick="selectStnCd(this, '0041', '목포'); return false;" class="map-18">목포</a></li>
-
 
 도착역 코드    arvRsStnCd	0015
 도착역 이름    arvRsStnCdNm	동대구
@@ -295,22 +277,5 @@ var srt = ['0514', '0036', '0507', '0037', '0010', '0015', '0552', '0041', '0020
 차종구분    trnGpCd	109 (전체 109 / SRT 300 / SRT+KTX 900)
 
 승차권종류 : pageId	TK0101010000 (일반승차권 TK0101010000 / 단체승차권 TK0101020000)
-
-
-    <select name="locSeatAttCd1" class="prnb checkForm" option="{isMust : false, message : '좌석위치를 선택하십시오.'}" title="좌석위치 선택">
-        <option value="000" selected="selected">좌석위치</option>
-        <option value="011">1인석</option>
-        <option value="012">창측좌석</option>
-        <option value="013">내측좌석</option>
-    </select>
-    <select name="rqSeatAttCd1" class="prnb checkForm" option="{isMust : false, message : '좌석속성을 선택하십시오.'}" title="좌석속성 선택">
-        <option value="015">좌석속성</option>
-        <option value="015" selected="selected">일반</option>
-        <option value="021">휠체어</option>
-        <option value="028">전동휠체어</option>
-    </select>
-    
-    
-
 """
 
