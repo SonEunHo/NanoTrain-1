@@ -148,9 +148,9 @@ def login(id, pw):
         return 200
 
 #예약하기
-def reserve():
+def reserve(can_reserve_list):
     req_time = int(time.time()*1000)
-    print ("")
+    print ("req_time:{}".format(req_time))
 
 #빈 좌석이 있는지 확인
 # 있으면 시간, 좌석정보(가능할까) 반환
@@ -185,12 +185,14 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
 
     #열차 정보만 가져온다.
     tr_list = bs(response.text, 'html.parser').select("tbody > tr")
-
+    can_reserve_list = []
     for tr in tr_list:
-        print("="*20)
         td_list = bs(str(tr), "html.parser").select('td')
         if "매진" not in str(td_list[6]):
             print("예약가능: {}, {}".format(td_list[3], td_list[4]))
+            can_reserve_list.insert(tr)
+
+    return can_reserve_list
 
 def pay():
     print("pay")
@@ -207,6 +209,10 @@ check_time_term = "3" #3초에 한번 확인
 
 
 ######################################################################
+######################################################################
+######################################################################
+######################################################################
+########################    LOGIC    #################################
 ######################################################################
 ######################################################################
 ######################################################################
@@ -244,10 +250,14 @@ while True:
 print("date = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(date, time_min, time_max))
 
 while True:
-    checkSeat(start_station, dest_station, date, time_min, time_max)
-    #예약 성공하면 종료
-    break;
+    can_reserve_list = checkSeat(start_station, dest_station, date, time_min, time_max)
+    if len(can_reserve_list) > 0:
+        #예약 성공하면 종료
+        reserve(can_reserve_list)
+        if True:
+            break
 
+    time.sleep(check_time_term)
 
 
 
