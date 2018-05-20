@@ -59,11 +59,11 @@ common_header = {
     "Accept-Encoding": "gzip, deflate, br",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
     "Connection": "keep-alive",
-    "Cookie": "PCID=15254283299465733307147; RC_COLOR=24; JSESSIONID_ETK=9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT; RC_RESOLUTION=1920*1080",
+    "Cookie": "PCID=15254283299465733307147; RC_COLOR=24; RC_RESOLUTION=1920*1080",
     "Host": "etk.srail.co.kr",
     "Referer": "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:59.0) Gecko/20100101 Firefox/59.0"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
 }
 
 login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
@@ -126,9 +126,10 @@ reserve_param = {
 
 
 def login(id, pw):
-    header = common_header.copy()
+    header = dict(common_header)
     header["Referer"] = login_referer
     header['Content-Type'] = 'application/x-www-form-urlencoded'
+    del header['Cookie']
 
     param = {
         'rsvTpCd': None,
@@ -140,6 +141,10 @@ def login(id, pw):
     }
     r = requests.post('https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000', headers = header, params = param)
 
+    if r.cookies and r.cookies['JSESSIONID_ETK']:
+        print ("get cookie:"+r.cookies['JSESSIONID_ETK'])
+        my_cookie["JSESSIONID_ETK"] = r.cookies['JSESSIONID_ETK']
+
     if '오류' in r.text:
         return 400
     elif '실패' in r.text:
@@ -149,66 +154,55 @@ def login(id, pw):
 
 #예약하기
 def reserve(can_reserve_list):
-    req_time = int(time.time()*1000)
-    print ("req_time:{}".format(req_time))
-    header = common_header
-    header['Cookie'] = header['Cookie']+" SR_MB_CD_NO="+str(id)
-    header['Upgrade-Insecure-Requests'] = 1
+    header = dict(common_header)
+    header['Cookie'] = header['Cookie']+"; SR_MB_CD_NO="+str(id) +"; JSESSIONID_ETK="+my_cookie['JSESSIONID_ETK']
     header['Referer'] = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
 
     for tr in can_reserve_list:
         param = set_reserve_param(tr)
 
-        #https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000
         response = requests.post("https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000", headers = header, params = param)
-        if not (response.status_code == 200 and "location.replace('/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000')" in response) :
+        if not (response.status_code == 200 and "location.replace('/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000')" in response.text) :
             continue
 
-
-        #https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000
-        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000")
-        if not (response.status_code == 200 and "location.replace('confirmReservationInfo.do?pageId=TK0101030000')" in response):
+        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000", headers = header)
+        if not (response.status_code == 200 and "location.replace('confirmReservationInfo.do?pageId=TK0101030000')" in response.text):
             continue
 
-        #https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000
-        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000")
-        if not (response.status_code == 200 and "10분 내에 결제하지 않으면 예약이 취소됩니다" in response):
+        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000", headers = header)
+        if not (response.status_code == 200 and "10분 내에 결제하지 않으면 예약이 취소됩니다" in response.text):
             continue
+        print("예약 성공*********************")
+        reserve_id = bs(response.text,'html.parser').find('input', attrs={"name":"pnrNo"})
+        print(reserve_id)
+
+        return reserve_id
         #예약 성공하면 반환값 리턴하면서 종료
+    return False
 
 def set_reserve_param(tr):
     param = dict(reserve_param)
 
-    param['dptDt1'] = param['runDt1'] = ""
-
     train_info_list = bs(str(tr), 'html.parser').select("td.trnNo > input")
-    train_info_dict = { bs(str(info)).find()['name']: bs(str(info)).find()['value'] for info in train_info_list }
+    train_info_dict = { bs(str(info), 'html.parser').find()['name'].split('[')[0]: bs(str(info),'html.parser').find()['value'] for info in train_info_list }
 
-
-
-    param['arvStnConsOrdr1'] = train_info_dict['~~']
-    param['arvStnRunOrdr1']
-    param['dirSeatAttCd1']
-    param['dptRsStnCd1'] = "출발역 코드"
-    param['dptStnConsOrdr1']
-    param['dptTm1'] = "tr"
-    param['jrnySqno1'] = "tr"
-    param['locSeatAttCd1'] = "tr"
-    param['reqTime'] = "현재시간"
-    param['rqSeatAttCd1'] = "좌석 속 (일반015 / 휠체어 021 / 전동휠체어 028)"
-    param['seatNo1_1']
-    param['seatNo1_2']
-    param['seatNo1_3']
-    param['seatNo1_4']
-    param['seatNo1_5']
-    param['seatNo1_6']
-    param['seatNo1_7']
-    param['seatNo1_8']
-    param['seatNo1_9']
-    param['stlbTrnClsfCd1'] = "tr"
-    param['trnGpCd1'] = "기차 종"
-    param['trnNo1']
-    param['trnOrdrNo1'] = "화면에서 몇번째 라인에 있던 열차인지"
+    param['dptDt1'] = train_info_dict['dptDt']
+    param['runDt1'] = train_info_dict['runDt']
+    param['arvStnConsOrdr1'] = train_info_dict['arvStnConsOrdr']
+    param['arvStnRunOrdr1'] = train_info_dict['arvStnRunOrdr']
+    param['arvRsStnCd1'] = train_info_dict['arvRsStnCd']
+    param['dirSeatAttCd1'] = '000'
+    param['dptRsStnCd1'] = train_info_dict['dptRsStnCd']
+    param['dptStnConsOrdr1'] = train_info_dict['dptStnConsOrdr']
+    param['dptTm1'] = train_info_dict['dptTm']
+    param['jrnySqno1'] = train_info_dict['jrnySqno']
+    param['locSeatAttCd1'] = "000"
+    param['reqTime'] = int(time.time()*1000) #현재시간
+    param['rqSeatAttCd1'] = train_info_dict['seatAttCd']
+    param['stlbTrnClsfCd1'] = train_info_dict['stlbTrnClsfCd']
+    param['trnGpCd1'] = train_info_dict['trnGpCd']
+    param['trnNo1'] = train_info_dict['trnNo']
+    param['trnOrdrNo1'] = train_info_dict['trnOrdrNo'] #화면에서 몇번째 라인에 있던 열차인지
 
     return param
 
@@ -250,7 +244,7 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
         td_list = bs(str(tr), "html.parser").select('td')
         if "매진" not in str(td_list[6]):
             print("예약가능: {}, {}".format(td_list[3], td_list[4]))
-            can_reserve_list.insert(tr)
+            can_reserve_list.append(tr)
 
     return can_reserve_list
 
@@ -268,7 +262,6 @@ def getSessionETK():
         return "-1"
 
 check_time_term = "3" #3초에 한번 확인
-
 
 ######################################################################
 ######################################################################
@@ -315,13 +308,12 @@ while True:
     can_reserve_list = checkSeat(start_station, dest_station, date, time_min, time_max)
     if len(can_reserve_list) > 0:
         #예약 성공하면 종료
-        reserve(can_reserve_list)
-        if True:
+        reserve_result = reserve(can_reserve_list)
+        if reserve_result:
             break
-
     time.sleep(check_time_term)
 
-
+print ('end!!')
 
 temp = """
 
