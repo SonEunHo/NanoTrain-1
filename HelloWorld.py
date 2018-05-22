@@ -245,6 +245,8 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
             print("예약가능: {}, {}".format(td_list[3], td_list[4]))
             can_reserve_list.append(tr)
 
+
+//test다다다다다다ㅏ다
     return can_reserve_list
 
 def pay(r_id): #r_id : 예약 번호
@@ -270,7 +272,7 @@ def getSessionETK():
 ######################################################################
 ######################################################################
 
-check_time_term = "3" #3초에 한번 확인
+check_time_term = 3 #3초에 한번 확인
 id = input("id입력:")
 pw = input("pw입력:")
 
@@ -298,7 +300,7 @@ while True:
     time_max = input("승차하고자 하는 가장 늦은 시간을 입력해주세요:")
     isRight = input("date = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(date, time_min, time_max))
     if isRight.lower() == 'y':
-        break;
+        break
 
 print("date = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(date, time_min, time_max))
 
