@@ -2,6 +2,7 @@
 import requests
 import time
 import sys
+import re as regx
 from bs4 import BeautifulSoup as bs
 
 my_cookie = {
@@ -233,20 +234,21 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
     param['dptDt'] = date
     param['dptTm'] = time_min+'0000'
 
-    print(header)
+    print("좌석 정보를 조회합니다..")
     response = requests.post(check_seat_url, headers = header, params = param)
 
     #열차 정보만 가져온다.
     tr_list = bs(response.text, 'html.parser').select("tbody > tr")
     can_reserve_list = []
     for tr in tr_list:
+        depart_time = bs(str(tr), "html.parser").find('input', attrs={"name": regx.compile("dptTm*")})['value'] #regular expression
+        if int(time_min.ljust(6,'0')) > int(depart_time) or int(depart_time) > int(time_max.ljust(6,'0')):
+            print("depart_time:"+depart_time+"은 예약대상이 아닙니다.")
+            continue
         td_list = bs(str(tr), "html.parser").select('td')
         if "매진" not in str(td_list[6]):
             print("예약가능: {}, {}".format(td_list[3], td_list[4]))
             can_reserve_list.append(tr)
-
-
-//test다다다다다다ㅏ다
     return can_reserve_list
 
 def pay(r_id): #r_id : 예약 번호
@@ -265,9 +267,7 @@ def getSessionETK():
 ######################################################################
 ######################################################################
 ######################################################################
-######################################################################
 ########################    LOGIC    #################################
-######################################################################
 ######################################################################
 ######################################################################
 ######################################################################
@@ -275,6 +275,8 @@ def getSessionETK():
 check_time_term = 3 #3초에 한번 확인
 id = input("id입력:")
 pw = input("pw입력:")
+time_min = "0000"
+time_max = "2359"
 
 if login(id, pw)!=200:
     print("----login fail----")
@@ -295,9 +297,11 @@ while True:
 
 while True:
     date = input("승차할 날짜를 입력하세요 (ex. 20180515) ('-'포함금지) :")
-    print("승차하고자 하는 시간대를 입력해주세요 (ex 14시~16시)")
+    print("승차하고자 하는 시간대를 입력해주세요 (ex 14시~16시) (ex 14:40 ~ 16) (ex 14:20 ~ 16:30)")
     time_min = input("승차하고자 하는 가장 빠른 시간을 입력해주세요:")
+    time_min = time_min.replace(':','').replace('시','')
     time_max = input("승차하고자 하는 가장 늦은 시간을 입력해주세요:")
+    time_max = time_max.replace(':','').replace('시','')
     isRight = input("date = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(date, time_min, time_max))
     if isRight.lower() == 'y':
         break
