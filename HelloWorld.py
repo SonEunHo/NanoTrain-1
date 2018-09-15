@@ -5,14 +5,42 @@ import sys
 import re as regx
 from bs4 import BeautifulSoup as bs
 
+######################################################################
+#########################    SETTINGS    #############################
+######################################################################
+
+check_time_term = 10        #3초에 한번 확인
+id = "your id"           #아이디 입력
+pw = "your pw"            #패스워드 입력
+reserve_date = '20180922'   #예약 날짜 입력"
+time_min = '0910'           #예약 희망 시간 최저
+time_max = '1110'           #예약 희망 시간 최대
+depart_station = '동탄'
+arrive_station = '동대구'
+
+
+########################    STAION LIST    ###########################
+'공주', '광주송정', '김천구미', '나주', '대전', '동대구', '동탄', '목포', '부산', '수서', '신경주', '오송', '울산', '익산', '정읍', '지제', '천안아산'
+######################################################################
+
+
+
+######################################################################
+######################    REQUEST META INFO     ######################
+######################################################################
+
+login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
+login_request_url = "https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000"
+check_seat_url = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
+temporal_session_id = '9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT'
 my_cookie = {
-    'JSESSIONID_ETK': '9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT',
+    'JSESSIONID_ETK': temporal_session_id,
     'PCID': '15261430919745926997128',
     'RC_COLOR': '24',
     'RC_RESOLUTION': '1680*1050'
 }
 
-station = {
+station_meta_info = {
     "공주": '0514',
     "광주송정": '0036',
     '김천구미': '0507',
@@ -32,42 +60,16 @@ station = {
     '천안아산': '0502'
 }
 
-param = {
-    "dptRsStnCd": '0551',
-    "arvRsStnCd": '0020',
-    "stlbTrnClsfCd": '05',
-    "psgNum": '1',
-    "seatAttCd": '015',
-    "isRequest": 'Y',
-    "dptRsStnCdNm": '수서',
-    "arvRsStnCdNm": '부산',
-    "dptDt": '20180513',
-    "dptTm": '005000',
-    "chtnDvCd": '1',
-    "psgInfoPerPrnb1": '1',
-    "psgInfoPerPrnb5": '0',
-    "psgInfoPerPrnb4": '0',
-    "psgInfoPerPrnb2": '0',
-    "psgInfoPerPrnb3": '0',
-    "locSeatAttCd1": '000',
-    "rqSeatAttCd1": '015',
-    "trnGpCd": '109'
-}
-
 common_header = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
     "Accept-Encoding": "gzip, deflate, br",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
     "Connection": "keep-alive",
-    "Cookie": "PCID=15254283299465733307147; RC_COLOR=24; RC_RESOLUTION=1920*1080",
     "Host": "etk.srail.co.kr",
-    "Referer": "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000",
+    "Referer": check_seat_url,
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
 }
-
-login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701000000"
-check_seat_url = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
 
 reserve_param = {
     'arvRsStnCd1': '0015', #도착역 코드
@@ -124,14 +126,18 @@ reserve_param = {
     'trnOrdrNo1': '6' #???
 }
 
+######################################################################
+##########################    LOGICS    ##############################
+######################################################################
 
 def login(id, pw):
     header = dict(common_header)
     header["Referer"] = login_referer
     header['Content-Type'] = 'application/x-www-form-urlencoded'
-    del header['Cookie']
 
-    param = {
+    login_success_keyword = 'location.replace(\'/main.do\')'
+
+    login_param = {
         'rsvTpCd': None,
         'goUrl': None,
         'from': None,
@@ -139,24 +145,23 @@ def login(id, pw):
         'srchDvNm': id,
         'hmpgPwdCphd': pw
     }
-    r = requests.post('https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000', headers = header, params = param)
+    response = requests.post(login_request_url, headers = header, params = login_param)
 
-    if r.cookies and r.cookies['JSESSIONID_ETK']:
-        print ("get cookie:"+r.cookies['JSESSIONID_ETK'])
-        my_cookie["JSESSIONID_ETK"] = r.cookies['JSESSIONID_ETK']
+    if response.cookies and response.cookies['JSESSIONID_ETK']:
+        print ("get cookie from login response:"+response.cookies['JSESSIONID_ETK'])
+        my_cookie["JSESSIONID_ETK"] = response.cookies['JSESSIONID_ETK']
 
-    if '오류' in r.text:
-        return 400
-    elif '실패' in r.text:
-        return 400
-    elif 'location.replace(\'/main.do\')' in r.text:
-        return 200
+    if response.status_code != 200:
+        return False
+    elif ('오류' in response.text) or ('실패' in response.text):
+        return False
+    elif login_success_keyword in response.text:
+        return True
 
-#예약하기
 def reserve(can_reserve_list):
     header = dict(common_header)
-    header['Cookie'] = header['Cookie']+"; SR_MB_CD_NO="+str(id) +"; JSESSIONID_ETK="+my_cookie['JSESSIONID_ETK']
-    header['Referer'] = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
+    header['Cookie'] = "SR_MB_CD_NO="+str(id) +"; JSESSIONID_ETK="+my_cookie['JSESSIONID_ETK']
+    header['Referer'] = check_seat_url
 
     for tr in can_reserve_list:
         param = set_reserve_param(tr)
@@ -207,10 +212,8 @@ def set_reserve_param(tr):
     return param
 
 #빈 좌석이 있는지 확인
-# 있으면 시간, 좌석정보(가능할까) 반환
 def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
     header = dict(common_header)
-    del header['Cookie'] #쿠키 값을 없애도 정상 응답이 온다.
     header["Referer"] = "https://etk.srail.co.kr/main.do"
     header['Content-Type'] = 'application/x-www-form-urlencoded'
 
@@ -228,9 +231,9 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
         'trnGpCd': '300' #300으로 하면 srt만 나옴, 109는 상관없이 다.
     }
     param['arvRsStnCdNm'] = dest
-    param['arvRsStnCd'] = station[dest]
+    param['arvRsStnCd'] = station_meta_info[dest]
     param['dptRsStnCdNm'] = start
-    param['dptRsStnCd'] = station[start]
+    param['dptRsStnCd'] = station_meta_info[start]
     param['dptDt'] = date
     param['dptTm'] = time_min+'0000'
 
@@ -256,60 +259,35 @@ def pay(r_id): #r_id : 예약 번호
     #pnrNo	320180516896562
     print("pay")
 
-def getSessionETK():
-    response = requests.get("https://etk.srail.co.kr/")
-    print (response.cookies.get_dict())
-    if response.status_code == 200:
-        return response.cookies['JSESSIONID_ETK']
-    else:
-        return "-1"
+def validate_setting_info():
+    stations = station_meta_info.keys()
+    if (depart_station not in stations) or (arrive_station not in stations):
+        print("역 정보가 올바르지 않습니다. 다시 입력하세요")
+        sys.exit(1)
+    if int(time_min) > int(time_max):
+        print("예약 희망 시간대가 비정상적입니다. 다시 입력하세요")
+        sys.exit(1)
+
 
 ######################################################################
-######################################################################
-######################################################################
-########################    LOGIC    #################################
-######################################################################
-######################################################################
+#########################    MAIN LOGIC    ###########################
 ######################################################################
 
-check_time_term = 3 #3초에 한번 확인
-id = input("id입력:")
-pw = input("pw입력:")
-time_min = "0000"
-time_max = "2359"
-
-if login(id, pw)!=200:
+if login(id, pw) == False:
     print("----login fail----")
     sys.exit(1)
 
 print ("----login success----")
+validate_setting_info()
 
-## 열차 빈 좌석 확인
-stations = station.keys()
-while True:
-    print ("역정보:"+str(stations))
-    start_station = input("출발역을 입력하세요:")
-    dest_station = input("도착역을 입력하세요:")
+isRight = input("출발역 = %s, 도착역 = %s, 예약하고자 하는 날짜 = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(depart_station, arrive_station, reserve_date, time_min, time_max))
+if (isRight.lower() != 'y') and (isRight.upper() != 'Y'):
+    sys.exit(1)
 
-    if (start_station in stations) and (dest_station in stations):
-        break
-    print("역 정보가 올바르지 않습니다. 다시 입력하세요")
+print("예약하고자 하는 날짜 = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(reserve_date, time_min, time_max))
 
 while True:
-    date = input("승차할 날짜를 입력하세요 (ex. 20180515) ('-'포함금지) :")
-    print("승차하고자 하는 시간대를 입력해주세요 (ex 14시~16시) (ex 14:40 ~ 16) (ex 14:20 ~ 16:30)")
-    time_min = input("승차하고자 하는 가장 빠른 시간을 입력해주세요:")
-    time_min = time_min.replace(':','').replace('시','')
-    time_max = input("승차하고자 하는 가장 늦은 시간을 입력해주세요:")
-    time_max = time_max.replace(':','').replace('시','')
-    isRight = input("date = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(date, time_min, time_max))
-    if isRight.lower() == 'y':
-        break
-
-print("date = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(date, time_min, time_max))
-
-while True:
-    can_reserve_list = checkSeat(start_station, dest_station, date, time_min, time_max)
+    can_reserve_list = checkSeat(depart_station, arrive_station, reserve_date, time_min, time_max)
     if len(can_reserve_list) > 0:
         #예약 성공하면 종료
         reserve_result = reserve(can_reserve_list)
@@ -318,4 +296,3 @@ while True:
     time.sleep(check_time_term)
 
 print ('end!!')
-
