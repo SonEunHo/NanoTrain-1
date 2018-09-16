@@ -153,7 +153,7 @@ def login(id, pw):
 
     if response.status_code != 200:
         return False
-    elif ('오류' in response.text) or ('실패' in response.text):
+    elif ('오류' in response.text) or ('실패' in response.text) or ('존재' in response.text):
         return False
     elif login_success_keyword in response.text:
         return True
