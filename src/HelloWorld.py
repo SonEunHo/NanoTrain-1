@@ -44,15 +44,9 @@ def login(id, pw):
     # 더 확실한 키워드를 찾아보자.
     login_success_keyword = 'location.replace(\'/main.do\')'
 
-    login_param = {
-        'rsvTpCd': None,
-        'goUrl': None,
-        'from': None,
-        'srchDvCd': '1',
-        'srchDvNm': id,
-        'hmpgPwdCphd': pw
-    }
-    response = requests.post(meta.login_request_url, headers = header, params = login_param)
+    response = requests.post(meta.login_request_url,
+                             headers=header,
+                             params=login_param(id, pw))
 
     if response.cookies and response.cookies['JSESSIONID_ETK']:
         print ("get cookie from login response:"+response.cookies['JSESSIONID_ETK'])
@@ -65,23 +59,36 @@ def login(id, pw):
     elif login_success_keyword in response.text:
         return True
 
-def reserve(can_reserve_list):
+
+def login_param(id, pw):
+    return {
+        'rsvTpCd': None,
+        'goUrl': None,
+        'from': None,
+        'srchDvCd': '1',
+        'srchDvNm': id,
+        'hmpgPwdCphd': pw
+    }
+
+
+def reserve(reserv_targets):
     header = dict(meta.common_header)
     header['Cookie'] = "SR_MB_CD_NO="+str(id) +"; JSESSIONID_ETK="+meta.my_cookie['JSESSIONID_ETK']
     header['Referer'] = meta.check_seat_url
 
-    for tr in can_reserve_list:
-        param = set_reserve_param(tr)
+    for tr in reserv_targets:
+        response = requests.post(meta.reservation_url,
+                                 headers=header,
+                                 params=reservation_param(tr))
 
-        response = requests.post("https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000", headers = header, params = param)
         if not (response.status_code == 200 and "location.replace('/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000')" in response.text) :
             continue
 
-        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000", headers = header)
+        response = requests.get(meta.reservation_url2, headers = header)
         if not (response.status_code == 200 and "location.replace('confirmReservationInfo.do?pageId=TK0101030000')" in response.text):
             continue
 
-        response = requests.get("https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000", headers = header)
+        response = requests.get(meta.reservation_confirm_url, headers = header)
         if not (response.status_code == 200 and "10분 내에 결제하지 않으면 예약이 취소됩니다" in response.text):
             continue
 
@@ -93,7 +100,8 @@ def reserve(can_reserve_list):
         #예약 성공하면 반환값 리턴하면서 종료
     return False
 
-def set_reserve_param(tr):
+
+def reservation_param(tr):
     param = dict(meta.reserve_param)
 
     train_info_list = bs(str(tr), 'html.parser').select("td.trnNo > input")
@@ -119,14 +127,41 @@ def set_reserve_param(tr):
 
     return param
 
+
 #빈 좌석이 있는지 확인
-def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
+def find_empty_seats(start, dest, date, time_min ='000000', time_max ='220000'):
     header = dict(meta.common_header)
     header["Referer"] = "https://etk.srail.co.kr/main.do"
     header['Content-Type'] = 'application/x-www-form-urlencoded'
 
-    # 메소드로 별도로 빼자. 지저분하다.
-    param = {
+    print("좌석 정보를 조회합니다..")
+    response = requests.post(meta.check_seat_url,
+                             headers=header,
+                             params=finding_seats_param(start, dest, date))
+
+    #열차 정보
+    trains = bs(response.text, 'html.parser').select("tbody > tr")
+
+    #매진이라도 열차가 하나라도 없다면 종료되도록
+    if not trains:
+        printPretty("원하는 시간대에 배차가 없습니다. 입력하신 시간을 수정해주세요")
+        shutdown()
+
+    reserv_targetst = []
+    for tr in trains:
+        depart_time = bs(str(tr), "html.parser").find('input', attrs={"name": regx.compile("dptTm*")})['value'] #regular expression
+        if int(time_min.ljust(6,'0')) > int(depart_time) or int(depart_time) > int(time_max.ljust(6,'0')):
+            print("depart_time:"+depart_time+"은 예약대상이 아닙니다..")
+            continue
+        td_list = bs(str(tr), "html.parser").select('td')
+        if "매진" not in str(td_list[6]):
+            print("예약가능: {}, {}".format(td_list[3], td_list[4]))
+            reserv_targets.append(tr)
+    return reserv_targets
+
+
+def finding_seats_param(start, dest, date):
+    return {
         'chtnDvCd': '1',
         'isRequest': 'Y',
         'psgInfoPerPrnb1': '1',
@@ -137,36 +172,15 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
         'psgNum': '1',
         'seatAttCd': '015',
         'stlbTrnClsfCd': '05',
-        'trnGpCd': '300' #300으로 하면 srt만 나옴, 109는 상관없이 다.
+        'trnGpCd': '300',  # 300으로 하면 srt만 나옴, 109는 상관없이 다.
+        'arvRsStnCdNm': dest,
+        'arvRsStnCd': meta.station_meta_info[dest],
+        'dptRsStnCdNm': start,
+        'dptRsStnCd': meta.station_meta_info[start],
+        'dptDt': date,
+        'dptTm': time_min + '0000'
     }
-    param['arvRsStnCdNm'] = dest
-    param['arvRsStnCd'] = meta.station_meta_info[dest]
-    param['dptRsStnCdNm'] = start
-    param['dptRsStnCd'] = meta.station_meta_info[start]
-    param['dptDt'] = date
-    param['dptTm'] = time_min+'0000'
 
-    print("좌석 정보를 조회합니다..")
-    response = requests.post(meta.check_seat_url, headers = header, params = param)
-
-    #열차 정보만 가져온다.
-    tr_list = bs(response.text, 'html.parser').select("tbody > tr")
-    can_reserve_list = []
-    for tr in tr_list:
-        depart_time = bs(str(tr), "html.parser").find('input', attrs={"name": regx.compile("dptTm*")})['value'] #regular expression
-        if int(time_min.ljust(6,'0')) > int(depart_time) or int(depart_time) > int(time_max.ljust(6,'0')):
-            print("depart_time:"+depart_time+"은 예약대상이 아닙니다.")
-            continue
-        td_list = bs(str(tr), "html.parser").select('td')
-        if "매진" not in str(td_list[6]):
-            print("예약가능: {}, {}".format(td_list[3], td_list[4]))
-            can_reserve_list.append(tr)
-    return can_reserve_list
-
-def pay(r_id): #r_id : 예약 번호
-    #https://etk.srail.co.kr/hpg/hra/03/selectSettleInfo.do?pageId=TK0101040000
-    #pnrNo	320180516896562
-    print("pay")
 
 def validate_setting_info():
     stations = meta.station_meta_info.keys()
@@ -177,8 +191,10 @@ def validate_setting_info():
         printPretty("예약 희망 시간대가 비정상적입니다. 다시 입력하세요")
         sys.exit(1)
 
+
 def printPretty(msg):
     print("************ [ {} ] ************".format(msg))
+
 
 def shutdown():
     sys.exit(1)
@@ -199,15 +215,15 @@ isRight = input("출발역 = %s, 도착역 = %s, 예약하고자 하는 날짜 =
 if (isRight.lower() != 'y') and (isRight.upper() != 'Y'):
     shutdown()
 
-print("예약하고자 하는 날짜 = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(reserve_date, time_min, time_max))
-
-#여기서 예외 처리해서 로그인을 다시 하면 어떨까
 while True:
-    can_reserve_list = checkSeat(depart_station, arrive_station, reserve_date, time_min, time_max)
-    if len(can_reserve_list) > 0:
-        #예약 성공하면 종료
-        if reserve(can_reserve_list):
+    try:
+        reserv_targets = find_empty_seats(depart_station, arrive_station, reserve_date, time_min, time_max)
+        if reserv_targets and reserve(reserv_targets):
             break
+    except:
+        if not login(id, pw):
+            printPretty("login fail")
+            shutdown()
     time.sleep(check_time_term)
 
 printPretty("end")

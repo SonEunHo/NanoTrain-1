@@ -2,6 +2,10 @@ login_referer = "https://etk.srail.co.kr/cmc/01/selectLoginForm.do?pageId=TK0701
 login_request_url = "https://etk.srail.co.kr/cmc/01/selectLoginInfo.do?pageId=TK0701000000"
 check_seat_url = "https://etk.srail.co.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000"
 temporal_session_id = '9TlJyAnoWpw33CTnx1f0yprb10fmr1fTA1vIIrf3UGZaX1e1MXNvjZjAIdSOBXTT'
+reservation_url = "https://etk.srail.co.kr/hpg/hra/01/checkUserInfo.do?pageId=TK0101010000"
+reservation_url2 = "https://etk.srail.co.kr/hpg/hra/02/requestReservationInfo.do?pageId=TK0101030000"
+reservation_confirm_url = "https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000"
+
 my_cookie = {
     'JSESSIONID_ETK': temporal_session_id,
     'PCID': '15261430919745926997128',
