@@ -4,6 +4,7 @@ import time
 import sys
 import re as regx
 import MetaInfos as meta
+from pygame import mixer
 from bs4 import BeautifulSoup as bs
 
 ######################################################################
@@ -14,8 +15,8 @@ check_time_term = 2        #3초에 한번 확인
 id = "id"           #아이디 입력
 pw = "pw"            #패스워드 입력
 reserve_date = '20190113'   #예약 날짜 입력"
-time_min = '1750'           #예약 희망 시간 최저
-time_max = '1753'           #예약 희망 시간 최대
+time_min = '1950'           #예약 희망 시간 최저
+time_max = '2053'           #예약 희망 시간 최대
 depart_station = '동대구'
 arrive_station = '수서'
 
@@ -147,7 +148,7 @@ def find_empty_seats(start, dest, date, time_min ='000000', time_max ='220000'):
         printPretty("원하는 시간대에 배차가 없습니다. 입력하신 시간을 수정해주세요")
         shutdown()
 
-    reserv_targetst = []
+    reserv_targets = []
     for tr in trains:
         depart_time = bs(str(tr), "html.parser").find('input', attrs={"name": regx.compile("dptTm*")})['value'] #regular expression
         if int(time_min.ljust(6,'0')) > int(depart_time) or int(depart_time) > int(time_max.ljust(6,'0')):
@@ -199,6 +200,18 @@ def printPretty(msg):
 def shutdown():
     sys.exit(1)
 
+
+def announce_success():
+    mixer.init()
+    mixer.music.load('gunshot.mp3')
+    # wait for load
+    time.sleep(1)
+    mixer.music.play()
+    while mixer.music.get_busy():
+        time.sleep(1)
+    print("done")
+
+
 ######################################################################
 #########################    MAIN LOGIC    ###########################
 ######################################################################
@@ -218,12 +231,14 @@ if (isRight.lower() != 'y') and (isRight.upper() != 'Y'):
 while True:
     try:
         reserv_targets = find_empty_seats(depart_station, arrive_station, reserve_date, time_min, time_max)
-        if reserv_targets and reserve(reserv_targets):
+        if len(reserv_targets) > 0 and reserve(reserv_targets):
             break
-    except:
+    except Exception as error:
+        print(error)
         if not login(id, pw):
             printPretty("login fail")
             shutdown()
     time.sleep(check_time_term)
 
 printPretty("end")
+announce_success()
