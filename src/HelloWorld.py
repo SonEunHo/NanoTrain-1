@@ -10,12 +10,12 @@ from bs4 import BeautifulSoup as bs
 #########################    SETTINGS    #############################
 ######################################################################
 
-check_time_term = 4        #3초에 한번 확인
+check_time_term = 2        #3초에 한번 확인
 id = "id"           #아이디 입력
-pw = "password"            #패스워드 입력
+pw = "pw"            #패스워드 입력
 reserve_date = '20190113'   #예약 날짜 입력"
-time_min = '1650'           #예약 희망 시간 최저
-time_max = '1655'           #예약 희망 시간 최대
+time_min = '1750'           #예약 희망 시간 최저
+time_max = '1753'           #예약 희망 시간 최대
 depart_station = '동대구'
 arrive_station = '수서'
 
@@ -41,6 +41,7 @@ def login(id, pw):
     header["Referer"] = meta.login_referer
     header['Content-Type'] = 'application/x-www-form-urlencoded'
 
+    # 더 확실한 키워드를 찾아보자.
     login_success_keyword = 'location.replace(\'/main.do\')'
 
     login_param = {
@@ -83,7 +84,8 @@ def reserve(can_reserve_list):
         response = requests.get("https://etk.srail.co.kr/hpg/hra/02/confirmReservationInfo.do?pageId=TK0101030000", headers = header)
         if not (response.status_code == 200 and "10분 내에 결제하지 않으면 예약이 취소됩니다" in response.text):
             continue
-        print("예약 성공*********************")
+
+        printPretty("예약 성공")
         reserve_id = bs(response.text,'html.parser').find('input', attrs={"name":"pnrNo"})
         print(reserve_id)
 
@@ -123,6 +125,7 @@ def checkSeat(start, dest, date, time_min = '000000', time_max = '220000'):
     header["Referer"] = "https://etk.srail.co.kr/main.do"
     header['Content-Type'] = 'application/x-www-form-urlencoded'
 
+    # 메소드로 별도로 빼자. 지저분하다.
     param = {
         'chtnDvCd': '1',
         'isRequest': 'Y',
@@ -168,37 +171,43 @@ def pay(r_id): #r_id : 예약 번호
 def validate_setting_info():
     stations = meta.station_meta_info.keys()
     if (depart_station not in stations) or (arrive_station not in stations):
-        print("역 정보가 올바르지 않습니다. 다시 입력하세요")
+        printPretty("역 정보가 올바르지 않습니다. 다시 입력하세요")
         sys.exit(1)
     if int(time_min) > int(time_max):
-        print("예약 희망 시간대가 비정상적입니다. 다시 입력하세요")
+        printPretty("예약 희망 시간대가 비정상적입니다. 다시 입력하세요")
         sys.exit(1)
 
+def printPretty(msg):
+    print("************ [ {} ] ************".format(msg))
+
+def shutdown():
+    sys.exit(1)
 
 ######################################################################
 #########################    MAIN LOGIC    ###########################
 ######################################################################
 
-if login(id, pw) == False:
-    print("----login fail----")
-    sys.exit(1)
-
-print ("----login success----")
 validate_setting_info()
+
+if not login(id, pw):
+    printPretty("login fail")
+    shutdown()
+
+printPretty("login success")
 
 isRight = input("출발역 = %s, 도착역 = %s, 예약하고자 하는 날짜 = %s, 희망시간대는 %s ~ %s 맞나요?(y/n):"%(depart_station, arrive_station, reserve_date, time_min, time_max))
 if (isRight.lower() != 'y') and (isRight.upper() != 'Y'):
-    sys.exit(1)
+    shutdown()
 
 print("예약하고자 하는 날짜 = %s, 희망시간대는 %s ~ %s 로 열차를 검색하기 시작합니다" %(reserve_date, time_min, time_max))
 
+#여기서 예외 처리해서 로그인을 다시 하면 어떨까
 while True:
     can_reserve_list = checkSeat(depart_station, arrive_station, reserve_date, time_min, time_max)
     if len(can_reserve_list) > 0:
         #예약 성공하면 종료
-        reserve_result = reserve(can_reserve_list)
-        if reserve_result:
+        if reserve(can_reserve_list):
             break
     time.sleep(check_time_term)
 
-print ('end!!')
+printPretty("end")
